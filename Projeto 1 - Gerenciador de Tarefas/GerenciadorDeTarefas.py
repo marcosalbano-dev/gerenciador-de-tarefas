@@ -239,6 +239,11 @@ class GerenciadorTarefasApp:
         # de selecionar um status.
         self.combo_status.current(0)
 
+        # Inicializa a variável que armazenará o ID da tarefa selecionada.
+        # Esta variável será usada para identificar qual tarefa deve ser
+        # atualizada ou excluída quando o usuário selecionar uma tarefa no Treeview.
+        self.id_tarefa_selecionada = None
+
         # Criação de um quadro (Frame) que irá conter os botões de ações principais
         # do aplicativo: Adicionar, Atualizar e Excluir.
         # Este quadro atua como um container para manter os botões agrupados e
@@ -315,6 +320,166 @@ class GerenciadorTarefasApp:
         # Posiciona o botão 'Atualizar Tarefa' ao lado do botão 'Adicionar Tarefa'.
         # Na mesma linha do botão adicionar, na segunda coluna, com o mesmo espaçamento.
         botao_atualizar.grid(row=0, column=1, padx=10, pady=5)
+
+        # Cria o botão "Excluir Tarefa", utilizado para remover tarefas do sistema.
+        botao_excluir = tk.Button(quadro_botoes,
+                                  text="Excluir Tarefa",
+                                  command=self.excluir_tarefa,
+                                  bg="#ef5350",
+                                  font=("Arial", 11, "bold"),
+                                  width=18)
+
+        # Posiciona o botão 'Excluir Tarefa' ao lado dos outros botões.
+        botao_excluir.grid(row=0, column=2, padx=10, pady=5)
+
+        # Criação de um quadro para o Treeview que exibirá as tarefas.
+        quadro_treeview = tk.Frame(self.janela, bg="#f0f0f0")
+        quadro_treeview.pack(fill="both", expand=True, padx=10, pady=10)
+
+        # Criação de um rótulo para o Treeview.
+        rotulo_lista = tk.Label(quadro_treeview,
+                               text="Lista de Tarefas:",
+                               font=("Arial", 12, "bold"),
+                               bg="#f0f0f0")
+        rotulo_lista.pack(anchor="w", pady=(0, 5))
+
+        # Criação de um quadro com scrollbar para o Treeview.
+        quadro_scroll = tk.Frame(quadro_treeview, bg="#f0f0f0")
+        quadro_scroll.pack(fill="both", expand=True)
+
+        # Criação de uma scrollbar vertical para o Treeview.
+        scrollbar = ttk.Scrollbar(quadro_scroll, orient="vertical")
+
+        # Criação do Treeview para exibir as tarefas em formato de tabela.
+        # O Treeview permite exibir dados em formato de árvore ou tabela.
+        self.arvore_tarefas = ttk.Treeview(quadro_scroll,
+                                           columns=("Título", "Descrição", "Status"),
+                                           show="headings",
+                                           yscrollcommand=scrollbar.set,
+                                           height=15)
+
+        # Configura a scrollbar para controlar o scroll do Treeview.
+        scrollbar.config(command=self.arvore_tarefas.yview)
+
+        # Configura os cabeçalhos das colunas do Treeview.
+        self.arvore_tarefas.heading("Título", text="Título")
+        self.arvore_tarefas.heading("Descrição", text="Descrição")
+        self.arvore_tarefas.heading("Status", text="Status")
+
+        # Configura a largura das colunas do Treeview.
+        self.arvore_tarefas.column("Título", width=200)
+        self.arvore_tarefas.column("Descrição", width=400)
+        self.arvore_tarefas.column("Status", width=150)
+
+        # Empacota a scrollbar e o Treeview no quadro.
+        scrollbar.pack(side="right", fill="y")
+        self.arvore_tarefas.pack(side="left", fill="both", expand=True)
+
+        # Vincula o evento de seleção do Treeview ao método que preenche os campos.
+        # Quando o usuário clicar em uma tarefa, os campos serão preenchidos automaticamente.
+        self.arvore_tarefas.bind("<<TreeviewSelect>>", self.selecionar_tarefa)
+
+        # Criação de um quadro para os filtros de status.
+        quadro_filtros = tk.Frame(self.janela, bg="#f0f0f0")
+        quadro_filtros.pack(fill="x", padx=10, pady=5)
+
+        # Rótulo para os filtros.
+        rotulo_filtro = tk.Label(quadro_filtros,
+                                text="Filtrar por Status:",
+                                font=("Arial", 11),
+                                bg="#f0f0f0")
+        rotulo_filtro.pack(side="left", padx=5)
+
+        # Botão para mostrar todas as tarefas.
+        botao_todas = tk.Button(quadro_filtros,
+                               text="Todas",
+                               command=lambda: self.carregar_tarefas(),
+                               bg="#e0e0e0",
+                               font=("Arial", 10),
+                               width=12)
+        botao_todas.pack(side="left", padx=5)
+
+        # Botão para filtrar apenas tarefas pendentes.
+        botao_pendentes = tk.Button(quadro_filtros,
+                                   text="Pendentes",
+                                   command=lambda: self.carregar_tarefas("Pendente"),
+                                   bg="#fff59d",
+                                   font=("Arial", 10),
+                                   width=12)
+        botao_pendentes.pack(side="left", padx=5)
+
+        # Botão para filtrar apenas tarefas concluídas.
+        botao_concluidas = tk.Button(quadro_filtros,
+                                    text="Concluídas",
+                                    command=lambda: self.carregar_tarefas("Concluída"),
+                                    bg="#a5d6a7",
+                                    font=("Arial", 10),
+                                    width=12)
+        botao_concluidas.pack(side="left", padx=5)
+
+        # Carrega as tarefas do banco de dados ao inicializar a aplicação.
+        self.carregar_tarefas()
+
+    # Define o método 'selecionar_tarefa', que é chamado quando o usuário
+    # seleciona uma tarefa no Treeview.
+    def selecionar_tarefa(self, event):
+        """
+        Este método preenche os campos de entrada com os dados da tarefa
+        selecionada no Treeview, permitindo que o usuário visualize e edite a tarefa.
+        """
+        # Obtém o item selecionado no Treeview.
+        selecao = self.arvore_tarefas.selection()
+        
+        # Verifica se há uma seleção válida.
+        if selecao:
+            # Obtém o ID do item selecionado (que corresponde ao _id do MongoDB).
+            item_selecionado = selecao[0]
+            self.id_tarefa_selecionada = item_selecionado
+            
+            # Obtém os valores do item selecionado no Treeview.
+            valores = self.arvore_tarefas.item(item_selecionado, "values")
+            
+            # Preenche os campos de entrada com os valores da tarefa selecionada.
+            self.entrada_titulo.delete(0, tk.END)
+            self.entrada_titulo.insert(0, valores[0])
+            
+            self.texto_descricao.delete("1.0", tk.END)
+            self.texto_descricao.insert("1.0", valores[1])
+            
+            self.var_status.set(valores[2])
+
+    # Define o método 'excluir_tarefa', responsável por remover uma tarefa do banco de dados.
+    def excluir_tarefa(self):
+        """
+        Este método exclui a tarefa selecionada do banco de dados MongoDB.
+        Ele verifica se há uma tarefa selecionada e solicita confirmação do usuário
+        antes de realizar a exclusão.
+        """
+        # Verifica se existe uma tarefa selecionada.
+        if not self.id_tarefa_selecionada:
+            messagebox.showwarning("Aviso", "Nenhuma tarefa selecionada para excluir.")
+            return
+        
+        # Solicita confirmação do usuário antes de excluir.
+        confirmacao = messagebox.askyesno("Confirmar Exclusão",
+                                         "Tem certeza que deseja excluir esta tarefa?")
+        
+        # Se o usuário confirmar, procede com a exclusão.
+        if confirmacao:
+            # Remove a tarefa do banco de dados usando o _id.
+            self.colecao.delete_one({"_id": ObjectId(self.id_tarefa_selecionada)})
+            
+            # Recarrega as tarefas no Treeview.
+            self.carregar_tarefas()
+            
+            # Limpa os campos de entrada.
+            self.limpar_campos_entrada()
+            
+            # Redefine o identificador da tarefa selecionada.
+            self.id_tarefa_selecionada = None
+            
+            # Exibe mensagem de sucesso.
+            messagebox.showinfo("Sucesso", "Tarefa excluída com sucesso!")
 
     # Define o método 'carregar_tarefas', que é responsável por carregar as
     # tarefas do banco de dados e exibi-las no Treeview.
