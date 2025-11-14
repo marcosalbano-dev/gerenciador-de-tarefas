@@ -408,6 +408,10 @@ class GerenciadorTarefasApp:
                                     pady=5,
                                     padx=5)
 
+        # Inicializa a variável que armazenará o ID da tarefa selecionada.
+        # Esta variável será usada para identificar qual tarefa deve ser
+        # atualizada ou excluída quando o usuário selecionar uma tarefa no Treeview.
+        self.id_tarefa_selecionada = None
 
         # Criação de um quadro (Frame) que irá conter os botões de ações principais
         # do aplicativo: Adicionar, Atualizar e Excluir.
@@ -782,13 +786,6 @@ class GerenciadorTarefasApp:
         # linhas do Treeview quando o conteúdo excede a altura disponível.
         barra_rolagem.config(command=self.arvore_tarefas.yview)
 
-        # Inicializa a variável 'id_tarefa_selecionada' com o valor None.
-        # Esta variável é usada para armazenar o identificador único (ID)
-        # da tarefa atualmente selecionada no Treeview.
-        # Ao inicializar como None, garantimos que nenhuma tarefa esteja
-        # selecionada ao iniciar o aplicativo.
-        self.id_tarefa_selecionada = None
-
         # Chama o método 'carregar_tarefas' para carregar as tarefas do banco
         # de dados ou outra fonte de dados ao iniciar a aplicação.
         # Este método é responsável por preencher o Treeview com as tarefas
@@ -895,7 +892,6 @@ class GerenciadorTarefasApp:
 
         # Permite salvar pressionando Enter.
         entrada_nome.bind('<Return>', lambda e: salvar_tecnico())
-
 
     # Define o método 'carregar_tarefas', que é responsável por carregar as
     # tarefas do banco de dados e exibi-las no Treeview.
